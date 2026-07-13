@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Dijkstra Visualizer</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #1a1a2e;
+            color: #eee;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        h1 { color: #00d4ff; margin-bottom: 6px; font-size: 24px; }
+        .subtitle { color: #888; font-size: 13px; margin-bottom: 16px; }
+        .controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            background: #16213e;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .controls label { color: #aaa; font-size: 13px; }
+        .node-display {
+            background: #0f3460;
+            border: 2px solid #00d4ff;
+            color: #00d4ff;
+            padding: 6px 16px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+            min-width: 50px;
+            text-align: center;
+        }
+        button {
+            padding: 8px 20px;
+            border-radius: 8px;
+            border: none;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        #btnPlay  { background: #00d4ff; color: #1a1a2e; }
+        #btnReset { background: #ff6600; color: #fff; }
+        .canvas-wrapper {
+            position: relative;
+            border: 2px solid #00d4ff;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #0f3460;
+        }
+        canvas { display: block; cursor: pointer; }
+        .hint {
+            position: absolute;
+            top: 10px; left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.6);
+            color: #00d4ff;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        #info   { margin-top: 10px; font-size: 14px; color: #aaa; min-height: 20px; }
+        #result { margin-top: 6px; font-size: 18px; color: #00ff88; font-weight: bold; min-height: 24px; }
+        .legend {
+            display: flex;
+            gap: 16px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #aaa; }
+        .dot { width: 16px; height: 16px; border-radius: 50%; }
+    </style>
+</head>
+<body>
+
+<h1>🗺️ Dijkstra Bidireccional</h1>
+<p class="subtitle">Expande desde ambos extremos hasta conectarse — click en <b>Inicio</b>, luego en <b>Destino</b></p>
+
+<div class="controls">
+    <label>Inicio:</label>
+    <div class="node-display" id="displayStart">—</div>
+    <label>Destino:</label>
+    <div class="node-display" id="displayEnd">—</div>
+    <button id="btnPlay"  onclick="startVisualization()" disabled>▶ Play</button>
+    <button id="btnReset" onclick="resetAll()">↺ Reset</button>
+</div>
+
+<div class="canvas-wrapper">
+    <canvas id="canvas" width="800" height="560"></canvas>
+    <div class="hint" id="hint">👆 Click en un nodo para elegir inicio</div>
+</div>
+
+<div id="info"></div>
+<div id="result"></div>
+
+<div class="legend">
+    <div class="legend-item"><div class="dot" style="background:#1e3a5a"></div> Calle sin visitar</div>
+    <div class="legend-item"><div class="dot" style="background:#0044cc"></div> Frente inicio (azul)</div>
+    <div class="legend-item"><div class="dot" style="background:#882200"></div> Frente destino (rojo)</div>
+    <div class="legend-item"><div class="dot" style="background:#00aaff"></div> Explorando (inicio)</div>
+    <div class="legend-item"><div class="dot" style="background:#ff5500"></div> Explorando (destino)</div>
+    <div class="legend-item"><div class="dot" style="background:#00ff88"></div> Ruta óptima</div>
+</div>
+
+<script>
+    // Datos inyectados desde Flask
+    const NODES = {{ nodes | tojson }};
+    const EDGES = {{ edges | tojson }};
+
+    let selectedStart = null, selectedEnd = null;
+    let steps = [], finalPath = [], currentStep = 0;
+    let animInterval = null, isRunning = false;
+
+    // Aristas iluminadas acumulativas por cada frente (clave = "a|b" normalizada)
+    let litFwd = {};   // azul – frente desde inicio
+    let litBwd = {};   // naranja – frente desde destino
+
+    const canvas = document.getElementById("canvas");
+    const ctx    = canvas.getContext("2d");
+    const NODE_R = 5;
+    const HIT_R  = 13;
+
+    function edgeKey(a, b) { return a < b ? `${a}|${b}` : `${b}|${a}`; }
+
+    // ── DIBUJO ────────────────────────────────────────────────────────────────
+    function drawGraph(litF, litB, pathNodes = []) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Fondo oscuro tipo mapa nocturno
+        ctx.fillStyle = "#080e14";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Pre-calcular set de aristas del camino final
+        const pathEdgeSet = new Set();
+        for (let i = 1; i < pathNodes.length; i++)
+            pathEdgeSet.add(edgeKey(pathNodes[i-1], pathNodes[i]));
+
+        // ── 1. Calles base (todas, gris oscuro) ───────────────────────────────
+        ctx.shadowBlur = 0;
+        EDGES.forEach(([a, b]) => {
+            const p1 = NODES[a], p2 = NODES[b];
+            if (!p1 || !p2) return;
+            const k = edgeKey(a, b);
+            if (litF[k] || litB[k] || pathEdgeSet.has(k)) return; // se dibuja después
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = "#152230";
+            ctx.lineWidth   = 1.2;
+            ctx.stroke();
+        });
+
+        // ── 2. Aristas exploradas por el frente de DESTINO (naranja) ─────────
+        ctx.shadowColor = "#ff4400";
+        EDGES.forEach(([a, b]) => {
+            const p1 = NODES[a], p2 = NODES[b];
+            if (!p1 || !p2) return;
+            const k = edgeKey(a, b);
+            if (!litB[k] || pathEdgeSet.has(k)) return;
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = "#ff5500";
+            ctx.lineWidth   = 1.6;
+            ctx.shadowBlur  = 6;
+            ctx.stroke();
+        });
+
+        // ── 3. Aristas exploradas por el frente de INICIO (azul) ─────────────
+        ctx.shadowColor = "#0099ff";
+        EDGES.forEach(([a, b]) => {
+            const p1 = NODES[a], p2 = NODES[b];
+            if (!p1 || !p2) return;
+            const k = edgeKey(a, b);
+            if (!litF[k] || pathEdgeSet.has(k)) return;
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = "#00aaff";
+            ctx.lineWidth   = 1.6;
+            ctx.shadowBlur  = 6;
+            ctx.stroke();
+        });
+
+        // ── 4. Ruta final (verde brillante, encima de todo) ───────────────────
+        if (pathEdgeSet.size > 0) {
+            ctx.shadowColor = "#00ff88";
+            ctx.shadowBlur  = 14;
+            EDGES.forEach(([a, b]) => {
+                const p1 = NODES[a], p2 = NODES[b];
+                if (!p1 || !p2) return;
+                if (!pathEdgeSet.has(edgeKey(a, b))) return;
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.strokeStyle = "#00ff88";
+                ctx.lineWidth   = 3.5;
+                ctx.stroke();
+            });
+        }
+        ctx.shadowBlur = 0;
+
+        // ── 5. Marcadores de inicio y destino ─────────────────────────────────
+        [
+            [selectedStart, "#00ff88"],
+            [selectedEnd,   "#ff3300"],
+        ].forEach(([name, col]) => {
+            if (!name) return;
+            const pos = NODES[name];
+            // Punto central
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, NODE_R + 2, 0, Math.PI * 2);
+            ctx.fillStyle   = col;
+            ctx.shadowColor = col;
+            ctx.shadowBlur  = 18;
+            ctx.fill();
+            ctx.shadowBlur  = 0;
+            // Anillo pulsante (estático)
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, NODE_R + 10, 0, Math.PI * 2);
+            ctx.strokeStyle = col;
+            ctx.lineWidth   = 2;
+            ctx.shadowColor = col;
+            ctx.shadowBlur  = 12;
+            ctx.stroke();
+            ctx.shadowBlur  = 0;
+        });
+    }
+
+    // ── CLICK EN CANVAS ───────────────────────────────────────────────────────
+    canvas.addEventListener("click", (e) => {
+        if (isRunning) return;
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+
+        for (const [name, pos] of Object.entries(NODES)) {
+            const dx = mx - pos.x, dy = my - pos.y;
+            if (Math.sqrt(dx*dx + dy*dy) <= HIT_R) {
+                if (!selectedStart) {
+                    selectedStart = name;
+                    document.getElementById("displayStart").textContent = name;
+                    document.getElementById("hint").textContent = "👆 Ahora click en el nodo DESTINO";
+                } else if (!selectedEnd && name !== selectedStart) {
+                    selectedEnd = name;
+                    document.getElementById("displayEnd").textContent = name;
+                    document.getElementById("hint").textContent = "✅ ¡Listo! Presioná ▶ Play";
+                    document.getElementById("btnPlay").disabled = false;
+                }
+                drawGraph(litFwd, litBwd, []);
+                break;
+            }
+        }
+    });
+
+    // ── PLAY ──────────────────────────────────────────────────────────────────
+    async function startVisualization() {
+        if (!selectedStart || !selectedEnd) return;
+        isRunning = true;
+        currentStep = 0;
+        litFwd = {};
+        litBwd = {};
+        document.getElementById("btnPlay").disabled  = true;
+        document.getElementById("btnReset").disabled = true;
+        document.getElementById("result").textContent = "";
+        document.getElementById("hint").textContent   = "⏳ Ejecutando algoritmo...";
+
+        const res  = await fetch("/run", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ start: selectedStart, end: selectedEnd })
+        });
+        const data = await res.json();
+
+        if (data.error) {
+            document.getElementById("info").textContent = "❌ " + data.error;
+            isRunning = false;
+            document.getElementById("btnReset").disabled = false;
+            return;
+        }
+
+        steps     = data.steps;
+        finalPath = data.path;
+
+        // Animación: cada paso acumula nuevas aristas iluminadas
+        animInterval = setInterval(() => {
+            if (currentStep >= steps.length) {
+                clearInterval(animInterval);
+                drawGraph(litFwd, litBwd, finalPath);
+                document.getElementById("result").textContent =
+                    `✅ Ruta: ${finalPath.join(" → ")}  |  Costo: ${data.cost}`;
+                document.getElementById("info").textContent  = "";
+                document.getElementById("hint").textContent  = "Completado. Presioná ↺ Reset para reiniciar";
+                isRunning = false;
+                document.getElementById("btnReset").disabled = false;
+                return;
+            }
+            const s = steps[currentStep];
+            // Acumular aristas nuevas en cada frente
+            (s.new_edges_fwd || []).forEach(([a, b]) => { litFwd[edgeKey(a, b)] = true; });
+            (s.new_edges_bwd || []).forEach(([a, b]) => { litBwd[edgeKey(a, b)] = true; });
+            drawGraph(litFwd, litBwd, []);
+            currentStep++;
+        }, 60);
+    }
+
+    // ── RESET ─────────────────────────────────────────────────────────────────
+    function resetAll() {
+        clearInterval(animInterval);
+        selectedStart = selectedEnd = null;
+        litFwd = {}; litBwd = {};
+        steps = []; finalPath = []; currentStep = 0; isRunning = false;
+        document.getElementById("displayStart").textContent  = "—";
+        document.getElementById("displayEnd").textContent    = "—";
+        document.getElementById("btnPlay").disabled          = true;
+        document.getElementById("btnReset").disabled         = false;
+        document.getElementById("info").textContent          = "";
+        document.getElementById("result").textContent        = "";
+        document.getElementById("hint").textContent          = "👆 Click en un nodo para elegir inicio";
+        drawGraph({}, {}, []);
+    }
+
+    // Dibujo inicial
+    drawGraph({}, {}, []);
+</script>
+</body>
+</html>

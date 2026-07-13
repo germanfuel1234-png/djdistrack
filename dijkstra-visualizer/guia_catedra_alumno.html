@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Guía del Alumno — Visualizador de Dijkstra Bidireccional</title>
+<style>
+  :root {
+    --azul:    #0d6efd;
+    --verde:   #198754;
+    --naranja: #fd7e14;
+    --rojo:    #dc3545;
+    --gris:    #6c757d;
+    --fondo:   #f8f9fa;
+    --codigo:  #1e1e2e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: var(--fondo);
+    color: #212529;
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  /* ── PORTADA ── */
+  .cover {
+    background: linear-gradient(135deg, #0d1117 0%, #0d3b6e 100%);
+    color: #fff;
+    text-align: center;
+    padding: 80px 40px 60px;
+  }
+  .cover h1 { font-size: 2.4em; margin-bottom: 10px; color: #00d4ff; letter-spacing: 1px; }
+  .cover .sub { font-size: 1.15em; color: #a0cfe8; margin-bottom: 30px; }
+  .cover .meta { font-size: 0.9em; color: #6a8fa8; }
+  .badge {
+    display: inline-block;
+    background: #00d4ff22;
+    border: 1px solid #00d4ff55;
+    color: #00d4ff;
+    border-radius: 20px;
+    padding: 4px 14px;
+    margin: 4px;
+    font-size: 0.85em;
+  }
+
+  /* ── NAVEGACIÓN ── */
+  .toc {
+    background: #fff;
+    border-left: 4px solid var(--azul);
+    padding: 24px 32px;
+    margin: 32px auto;
+    max-width: 860px;
+    border-radius: 0 8px 8px 0;
+    box-shadow: 0 2px 8px #0001;
+  }
+  .toc h2 { color: var(--azul); margin-bottom: 12px; font-size: 1.1em; text-transform: uppercase; letter-spacing: 1px; }
+  .toc ol { padding-left: 20px; }
+  .toc li { margin: 6px 0; }
+  .toc a { color: var(--azul); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  /* ── SECCIONES ── */
+  .section {
+    max-width: 860px;
+    margin: 0 auto 48px;
+    padding: 0 24px;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #dee2e6;
+    padding-bottom: 12px;
+  }
+  .step-num {
+    background: var(--azul);
+    color: #fff;
+    border-radius: 50%;
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; font-size: 1em; flex-shrink: 0;
+  }
+  .section-header h2 { font-size: 1.35em; color: #1a1a2e; }
+
+  /* ── CAJAS ── */
+  .box {
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin: 18px 0;
+  }
+  .box-info    { background: #e7f3ff; border-left: 4px solid var(--azul);    }
+  .box-tip     { background: #d1f0e0; border-left: 4px solid var(--verde);   }
+  .box-dark    { background: #1e1e2e; color: #cdd6f4; border-radius: 8px; padding: 20px; font-family: 'Consolas', monospace; font-size: 0.88em; overflow-x: auto; }
+  .box strong  { display: block; margin-bottom: 6px; font-size: 0.95em; }
+
+  /* ── CÓDIGO ── */
+  pre {
+    background: var(--codigo);
+    color: #cdd6f4;
+    border-radius: 8px;
+    padding: 20px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.86em;
+    line-height: 1.6;
+    margin: 14px 0;
+  }
+  code { font-family: 'Consolas', monospace; background: #e9ecef; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+  .kw   { color: #cba6f7; }  /* keyword */
+  .fn   { color: #89b4fa; }  /* function */
+  .str  { color: #a6e3a1; }  /* string */
+  .cm   { color: #585b70; }  /* comment */
+  .num  { color: #fab387; }  /* number */
+  .cls  { color: #f9e2af; }  /* class */
+
+  /* ── TABLA ── */
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+  th { background: #1a1a2e; color: #00d4ff; padding: 10px 14px; text-align: left; font-size: 0.9em; }
+  td { padding: 9px 14px; border-bottom: 1px solid #dee2e6; font-size: 0.93em; }
+  tr:hover td { background: #f1f3f5; }
+
+  /* ── ESTRUCTURA DE ARCHIVOS ── */
+  .filetree {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    border-radius: 8px;
+    padding: 20px 24px;
+    font-family: monospace;
+    font-size: 0.9em;
+    line-height: 1.9;
+  }
+  .filetree .dir  { color: #89b4fa; }
+  .filetree .file { color: #a6e3a1; }
+  .filetree .note { color: #585b70; }
+
+  /* ── DIAGRAMA ── */
+  .diagram {
+    background: #1a1a2e;
+    border-radius: 12px;
+    padding: 30px;
+    text-align: center;
+    margin: 18px 0;
+    color: #cdd6f4;
+    font-family: monospace;
+    font-size: 0.88em;
+    overflow-x: auto;
+  }
+  .diagram svg { max-width: 100%; }
+
+  /* ── EJERCICIOS ── */
+  .ejercicio {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin: 14px 0;
+    position: relative;
+  }
+  .ejercicio .nivel {
+    position: absolute; top: 16px; right: 16px;
+    font-size: 0.78em; font-weight: bold;
+    padding: 2px 10px; border-radius: 10px;
+  }
+  .nivel-basico    { background: #d1f0e0; color: #155724; }
+  .nivel-medio     { background: #fff3cd; color: #856404; }
+  .nivel-avanzado  { background: #f8d7da; color: #721c24; }
+  .ejercicio h4    { margin-bottom: 8px; color: #1a1a2e; }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 40px;
+    color: var(--gris);
+    font-size: 0.85em;
+    border-top: 1px solid #dee2e6;
+    margin-top: 60px;
+  }
+
+  h3 { margin: 20px 0 10px; color: #1a1a2e; font-size: 1.05em; }
+  p  { margin: 10px 0; }
+  ul, ol { padding-left: 22px; margin: 10px 0; }
+  li { margin: 5px 0; }
+
+  @media print {
+    .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    pre, .box-dark, .filetree, .diagram { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ PORTADA -->
+<div class="cover">
+  <h1>🗺️ Visualizador de Dijkstra Bidireccional</h1>
+  <p class="sub">Guía del Alumno — Proyecto Completo Paso a Paso</p>
+  <p style="margin:20px 0">
+    <span class="badge">Python 3</span>
+    <span class="badge">Flask</span>
+    <span class="badge">HTML / Canvas</span>
+    <span class="badge">Algoritmos y Estructuras de Datos</span>
+  </p>
+  <p class="meta">Nivel: Introducción a la Programación II &nbsp;|&nbsp; Duración estimada: 3 clases de 90 min</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ ÍNDICE -->
+<div class="toc">
+  <h2>📋 Índice</h2>
+  <ol>
+    <li><a href="#s1">Introducción — ¿Qué vamos a construir?</a></li>
+    <li><a href="#s2">Conceptos previos — El algoritmo de Dijkstra</a></li>
+    <li><a href="#s3">Preparar el entorno de trabajo</a></li>
+    <li><a href="#s4">Estructura del proyecto</a></li>
+    <li><a href="#s5">El Grafo — <code>graph.py</code></a></li>
+    <li><a href="#s6">El Algoritmo — <code>dijkstra.py</code></a></li>
+    <li><a href="#s7">El Servidor Web — <code>app.py</code></a></li>
+    <li><a href="#s8">La Interfaz Visual — <code>index.html</code></a></li>
+    <li><a href="#s9">Ejecutar el proyecto en 127.0.0.1</a></li>
+    <li><a href="#s10">Cómo explicar el algoritmo (sin dominar el código)</a></li>
+    <li><a href="#s11">Ejercicios y desafíos</a></li>
+    <li><a href="#s12">Redes informáticas — Dijkstra en la vida real</a></li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ S1 -->
+<div class="section" id="s1">
+  <div class="section-header">
+    <div class="step-num">1</div>
+    <h2>Introducción — ¿Qué vamos a construir?</h2>
+  </div>
+
+  <p>Vamos a construir una <strong>aplicación web</strong> que visualiza en tiempo real cómo el algoritmo de Dijkstra Bidireccional encuentra el camino más corto entre dos puntos en una ciudad simulada.</p>
+
+  <div class="box box-info">
+    <strong>🎯 Tu objetivo en este proyecto</strong>
+    Vas a ver en el navegador un mapa de calles. Al hacer click en dos intersecciones, la animación te va a mostrar cómo el algoritmo "explora" las calles simultáneamente desde ambos extremos (azul desde el inicio, naranja desde el destino) hasta que se encuentran, revelando la ruta óptima en verde.
+  </div>
+
+  <h3>¿Por qué este proyecto es valioso?</h3>
+  <ul>
+    <li><strong>Une tres áreas</strong> en un solo entregable: algoritmos, backend y frontend.</li>
+    <li>El resultado es <strong>visual e intuitivo</strong> — podés ver el algoritmo "pensando".</li>
+    <li>Es el mismo principio que usan <strong>Google Maps, Waze y GPS</strong> modernos.</li>
+    <li>Podés presentarlo y explicarlo <strong>sin necesidad de conocer cada línea de código</strong>.</li>
+  </ul>
+
+  <div class="box box-tip">
+    <strong>💡 Cómo vas a trabajar en este proyecto</strong>
+    <ol style="margin-top:8px">
+      <li><strong>Parte 1:</strong> Entendés los conceptos del algoritmo con diagramas y ejemplos, sin tocar código todavía.</li>
+      <li><strong>Parte 2:</strong> Analizás los bloques de código clave por separado, sin necesidad de escribirlos desde cero.</li>
+      <li><strong>Parte 3:</strong> Corrés el proyecto completo, lo explorás en el navegador, lo explicás y lo modificás a tu gusto.</li>
+    </ol>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ S2 -->
+<div class="section" id="s2">
+  <div class="section-header">
+    <div class="step-num">2</div>
+    <h2>Conceptos previos — El algoritmo de Dijkstra</h2>
+  </div>
+
+  <h3>¿Qué es un grafo?</h3>
+  <p>Un <strong>grafo</strong> es una estructura de datos formada por:</p>
+  <ul>
+    <li><strong>Nodos</strong> (también llamados vértices): representan puntos. En nuestro caso, <em>intersecciones de calles</em>.</li>
+    <li><strong>Aristas</strong> (también llamadas arcos): conexiones entre nodos. En nuestro caso, <em>calles</em>.</li>
+    <li><strong>Pesos</strong>: valor numérico de cada arista. En nuestro caso, <em>distancia o tiempo de viaje</em>.</li>
+  </ul>
+
+  <div class="diagram">
+    <pre style="background:transparent;color:#cdd6f4;text-align:left;display:inline-block">
+     [A] ——4—— [B]
+      |          |
+      2          5
+      |          |
+     [C] ——3—— [E] ——1—— [D]
+                |
+                5
+                |
+               [G]
+    </pre>
+    <p style="color:#585b70;margin-top:8px;font-size:0.9em">Grafo de ejemplo: los números son los pesos (costo de cada calle)</p>
+  </div>
+
+  <h3>¿Qué hace Dijkstra?</h3>
+  <p>El algoritmo de Dijkstra responde a la pregunta: <strong>"¿Cuál es el camino de menor costo entre el nodo A y el nodo X?"</strong></p>
+
+  <h3>Cómo funciona — paso a paso (en palabras simples)</h3>
+  <ol>
+    <li>Empezamos en el nodo de origen. Su distancia es <code>0</code>. Todos los demás nodos comienzan con distancia <code>∞</code>.</li>
+    <li>Miramos los vecinos del nodo actual y calculamos: <code>distancia_actual + peso_arista</code>.</li>
+    <li>Si esa suma es <strong>menor</strong> que la distancia conocida del vecino, la actualizamos.</li>
+    <li>Pasamos al nodo con la <strong>distancia acumulada más baja</strong> que aún no visitamos.</li>
+    <li>Repetimos hasta llegar al destino.</li>
+  </ol>
+
+  <div class="box box-tip">
+    <strong>🧩 Analogía</strong>
+    Imaginate que estás en el centro de una ciudad con un walkie-talkie. Mandás señales que viajan por las calles. La señal más rápida en llegar al destino habrá recorrido el camino más corto. Dijkstra simula exactamente eso: expande "olas" desde el origen.
+  </div>
+
+  <h3>Dijkstra Bidireccional</h3>
+  <p>En vez de expandir desde un solo punto, expandimos <strong>desde ambos extremos al mismo tiempo</strong>:</p>
+  <ul>
+    <li>Frente <span style="color:#00aaff;font-weight:bold">AZUL</span>: parte del nodo inicio, avanza hacia adelante.</li>
+    <li>Frente <span style="color:#ff5500;font-weight:bold">NARANJA</span>: parte del nodo destino, avanza hacia atrás.</li>
+    <li>Cuando ambos frentes se encuentran en un nodo → tenemos la ruta óptima.</li>
+  </ul>
+  <p>Esto es más eficiente: en promedio explora la <strong>mitad de los nodos</strong> que Dijkstra clásico.</p>
+
+  <table>
+    <tr><th>Concepto</th><th>Dijkstra Clásico</th><th>Dijkstra Bidireccional</th></tr>
+    <tr><td>Punto de inicio</td><td>Uno (origen)</td><td>Dos (origen + destino)</td></tr>
+    <tr><td>Nodos explorados</td><td>~N nodos</td><td>~N/2 nodos</td></tr>
+    <tr><td>Velocidad</td><td>Normal</td><td>~2x más rápido</td></tr>
+    <tr><td>Usado en</td><td>Grafos pequeños</td><td>Google Maps, GPS reales</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ S3 -->
+<div class="section" id="s3">
+  <div class="section-header">
+    <div class="step-num">3</div>
+    <h2>Preparar el entorno de trabajo</h2>
+  </div>
+
+  <h3>Lo que necesitamos instalar</h3>
+  <table>
+    <tr><th>Herramienta</th><th>Versión mínima</th><th>Descarga</th></tr>
+    <tr><td>Python</td><td>3.9+</td><td>python.org/downloads</td></tr>
+    <tr><td>pip (viene con Python)</td><td>—</td><td>—</td></tr>
+    <tr><td>Flask</td><td>3.x</td><td>Se instala con pip</td></tr>
+    <tr><td>VS Code (recomendado)</td><td>cualquiera</td><td>code.visualstudio.com</td></tr>
+  </table>
+
+  <h3>Paso 1 — Verificar Python</h3>
+  <p>Abrí una terminal (PowerShell en Windows, Terminal en Mac/Linux) y escribí:</p>
+<pre>python --version</pre>
+  <p>Debe mostrar algo como <code>Python 3.11.x</code>. Si dice "no se reconoce el comando", instalá Python primero.</p>
+
+  <h3>Paso 2 — Instalar Flask</h3>
+<pre>pip install flask</pre>
+
+  <h3>Paso 3 — Obtener el proyecto</h3>
+  <p>Recibirás la carpeta <code>dijkstra-visualizer/</code> ya lista para usar. No se requiere ninguna instalación adicional.</p>
+
+  <div class="box box-info">
+    <strong>📁 ¿Dónde guardar el proyecto?</strong>
+    En cualquier carpeta, por ejemplo: <code>C:\Usuarios\TuNombre\Escritorio\dijkstra-visualizer\</code>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ S4 -->
+<div class="section" id="s4">
+  <div class="section-header">
+    <div class="step-num">4</div>
+    <h2>Estructura del proyecto</h2>
+  </div>
+
+  <p>Este es el árbol de archivos. Es importante que entiendas <strong>para qué sirve cada carpeta antes de ver el código</strong>.</p>
+
+  <div class="filetree">
+    <span class="dir">dijkstra-visualizer/</span><br>
+    &nbsp;&nbsp;<span class="dir">src/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="note">← código fuente principal</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="file">app.py</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="note">← punto de entrada, servidor Flask</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">algorithm/</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">graph.py</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="note">← estructura de datos del grafo</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">dijkstra.py</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="note">← implementación del algoritmo</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">routes/</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">api.py</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="note">← rutas REST auxiliares</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">static/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="note">← archivos que el browser descarga</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">css/</span> <span class="file">styles.css</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">js/</span> <span class="file">map.js</span>&nbsp; <span class="file">visualizer.js</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">templates/</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">index.html</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="note">← interfaz visual (Canvas + JS)</span><br>
+    &nbsp;&nbsp;<span class="dir">tests/</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="file">test_dijkstra.py</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="note">← pruebas del algoritmo</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="file">test_graph.py</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="note">← pruebas del grafo</span><br>
+    &nbsp;&nbsp;<span class="file">requirements.txt</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="note">← lista de dependencias</span>
+  </div>
+
+  <div class="box box-tip">
+    <strong>💡 Desafío de comprensión</strong>
+    Antes de seguir leyendo, mirá la estructura de archivos y escribí una oración por cada archivo explicando qué creés que hace. Después comparala con la explicación real a medida que avancés en la guía.
+  </div>
+
+  <h3>Flujo de datos del sistema</h3>
+  <div class="diagram">
+    <pre style="background:transparent;color:#cdd6f4;text-align:center">
+  NAVEGADOR (index.html)
+        │
+        │  Click en dos nodos
+        │  POST /run  {start, end}
+        ▼
+  SERVIDOR FLASK (app.py)
+        │
+        │  Llama al algoritmo
+        ▼
+  ALGORITMO (dijkstra.py + graph.py)
+        │
+        │  Devuelve {steps, path, cost}
+        ▼
+  NAVEGADOR — anima la expansión
+    </pre>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ S5 -->
+<div class="section" id="s5">
+  <div class="section-header">
+    <div class="step-num">5</div>
+    <h2>El Grafo — <code>graph.py</code></h2>
+  </div>
+
+  <p>El grafo es la estructura que representa la ciudad.</p>
+
+  <h3>La solución: diccionario de adyacencia</h3>
+<pre><span class="cm"># Así se representa el grafo en memoria</span>
+edges = {
+    <span class="str">"A"</span>: {<span class="str">"B"</span>: <span class="num">4</span>, <span class="str">"C"</span>: <span class="num">2</span>},   <span class="cm"># A conecta con B (costo 4) y C (costo 2)</span>
+    <span class="str">"B"</span>: {<span class="str">"A"</span>: <span class="num">4</span>, <span class="str">"D"</span>: <span class="num">5</span>},
+    <span class="str">"C"</span>: {<span class="str">"A"</span>: <span class="num">2</span>, <span class="str">"D"</span>: <span class="num">3</span>},
+    <span class="str">"D"</span>: {<span class="str">"B"</span>: <span class="num">5</span>, <span class="str">"C"</span>: <span class="num">3</span>},
+}</pre>
+
+  <h3>Código de la clase Graph</h3>
+  <p>Analizá el código método por método, preguntándote "¿qué hace este bloque?":</p>
+<pre><span class="kw">class</span> <span class="cls">Graph</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        self.nodes = {}   <span class="cm"># {nodo: {}} — registra que el nodo existe</span>
+        self.edges = {}   <span class="cm"># {nodo: {vecino: peso}} — adyacencia</span>
+
+    <span class="kw">def</span> <span class="fn">add_node</span>(self, value):
+        <span class="kw">if</span> value <span class="kw">not in</span> self.nodes:
+            self.nodes[value] = {}
+            self.edges[value] = {}
+
+    <span class="kw">def</span> <span class="fn">add_edge</span>(self, from_node, to_node, weight):
+        <span class="cm"># Auto-crea nodos si no existen</span>
+        <span class="kw">if</span> from_node <span class="kw">not in</span> self.nodes:
+            self.<span class="fn">add_node</span>(from_node)
+        <span class="kw">if</span> to_node <span class="kw">not in</span> self.nodes:
+            self.<span class="fn">add_node</span>(to_node)
+        self.edges[from_node][to_node] = weight
+        self.edges[to_node][from_node] = weight  <span class="cm"># grafo no dirigido</span>
+
+    <span class="kw">def</span> <span class="fn">__iter__</span>(self):
+        <span class="kw">return</span> iter(self.nodes)  <span class="cm"># permite: for nodo in grafo</span>
+
+    <span class="kw">def</span> <span class="fn">__getitem__</span>(self, node):
+        <span class="kw">return</span> self.edges[node]  <span class="cm"># permite: grafo["A"] → vecinos</span></pre>
+
+  <div class="box box-info">
+    <strong>🔍 Preguntas para reflexionar</strong>
+    <ul style="margin-top:6px">
+      <li>¿Por qué <code>add_edge</code> agrega la conexión en <em>ambas</em> direcciones?</li>
+      <li>¿Qué diferencia hay entre <code>nodes</code> y <code>edges</code>?</li>
+      <li>¿Qué pasa si llamo <code>add_edge("A","B",5)</code> y "A" no existe todavía?</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ S6 -->
+<div class="section" id="s6">
+  <div class="section-header">
+    <div class="step-num">6</div>
+    <h2>El Algoritmo — <code>dijkstra.py</code></h2>
+  </div>
+
+  <h3>Dijkstra manual — hacelo vos</h3>
+  <p>Antes de leer el código, resolvé el algoritmo a mano con este grafo: A–B(4), A–C(2), B–D(5), C–D(3)</p>
+  <p>Completá la siguiente tabla paso a paso:</p>
+  <table>
+    <tr><th>Paso</th><th>Nodo actual</th><th>dist[A]</th><th>dist[B]</th><th>dist[C]</th><th>dist[D]</th></tr>
+    <tr><td>Inicio</td><td>—</td><td>0</td><td>∞</td><td>∞</td><td>∞</td></tr>
+    <tr><td>1</td><td>A</td><td>0</td><td>4</td><td>2</td><td>∞</td></tr>
+    <tr><td>2</td><td>C</td><td>0</td><td>4</td><td>2</td><td>5</td></tr>
+    <tr><td>3</td><td>B</td><td>0</td><td>4</td><td>2</td><td>5</td></tr>
+    <tr><td>4</td><td>D</td><td>0</td><td>4</td><td>2</td><td><strong>5</strong></td></tr>
+  </table>
+  <p>Ruta más corta A→D: <strong>A → C → D</strong>, costo total: <strong>5</strong></p>
+
+  <h3>El código del algoritmo</h3>
+<pre><span class="kw">def</span> <span class="fn">dijkstra</span>(graph, start, end):
+    <span class="kw">import</span> heapq   <span class="cm"># cola de prioridad (min-heap)</span>
+
+    <span class="cm"># ── 1. Validaciones ───────────────────────────────────────────</span>
+    <span class="kw">if</span> start <span class="kw">not in</span> graph <span class="kw">or</span> end <span class="kw">not in</span> graph:
+        <span class="kw">return</span> [], float(<span class="str">'inf'</span>)
+
+    <span class="kw">if</span> start == end:
+        <span class="kw">return</span> [start], <span class="num">0</span>
+
+    <span class="cm"># ── 2. Inicialización ────────────────────────────────────────</span>
+    <span class="cm"># Dict comprehension: la variable 'distances' es un diccionario</span>
+    <span class="cm"># donde cada clave es un 'node' obtenido iterando el grafo con for,</span>
+    <span class="cm"># y cada valor es float('infinity') — un float IEEE-754 que representa +∞.</span>
+    <span class="cm"># Equivale a escribir: distances['A'] = inf, distances['B'] = inf, ...</span>
+    distances = {node: float(<span class="str">'infinity'</span>) <span class="kw">for</span> node <span class="kw">in</span> graph}
+    distances[start] = <span class="num">0</span>
+
+    priority_queue = [(<span class="num">0</span>, start)]   <span class="cm"># (distancia, nodo)</span>
+    previous_nodes = {node: <span class="kw">None</span> <span class="kw">for</span> node <span class="kw">in</span> graph}
+
+    <span class="cm"># ── 3. Bucle principal ────────────────────────────────────────</span>
+    <span class="kw">while</span> priority_queue:
+        current_distance, current_node = heapq.<span class="fn">heappop</span>(priority_queue)
+
+        <span class="kw">if</span> current_node == end:
+            <span class="kw">break</span>  <span class="cm"># llegamos al destino</span>
+
+        <span class="kw">if</span> current_distance > distances[current_node]:
+            <span class="kw">continue</span>  <span class="cm"># registro obsoleto, lo descartamos</span>
+
+        <span class="kw">for</span> neighbor, weight <span class="kw">in</span> graph[current_node].items():
+            distance = current_distance + weight
+            <span class="kw">if</span> distance < distances[neighbor]:   <span class="cm"># relajación de arista</span>
+                distances[neighbor] = distance
+                previous_nodes[neighbor] = current_node
+                heapq.<span class="fn">heappush</span>(priority_queue, (distance, neighbor))
+
+    <span class="cm"># ── 4. Reconstrucción del camino ──────────────────────────────</span>
+    <span class="kw">if</span> distances[end] == float(<span class="str">'infinity'</span>):
+        <span class="kw">return</span> [], float(<span class="str">'inf'</span>)  <span class="cm"># no hay camino</span>
+
+    path = []
+    node = end
+    <span class="kw">while</span> node <span class="kw">is not None</span>:
+        path.<span class="fn">append</span>(node)
+        node = previous_nodes[node]
+    path.<span class="fn">reverse</span>()  <span class="cm"># quedó al revés (destino→origen)</span>
+
+    <span class="kw">return</span> path, distances[end]</pre>
+
+  <div class="box box-info">
+    <strong>🔍 Preguntas para reflexionar</strong>
+    <ul style="margin-top:6px">
+      <li>¿Por qué inicializamos todas las distancias en <code>∞</code>?</li>
+      <li>¿Qué es <code>heapq</code> y por qué lo usamos en lugar de una lista normal?</li>
+      <li>¿Qué significa "relajar una arista"?</li>
+      <li>¿Por qué al reconstruir el camino hay que invertir la lista?</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ S7 -->
+<div class="section" id="s7">
+  <div class="section-header">
+    <div class="step-num">7</div>
+    <h2>El Servidor Web — <code>app.py</code></h2>
+  </div>
+
+  <div class="box box-info">
+    <strong>📡 ¿Qué es Flask?</strong>
+    Flask es un <em>micro-framework</em> de Python que permite crear servidores web con muy pocas líneas de código. Cuando el navegador pide una página o manda datos, Flask decide qué función de Python ejecutar y qué responder.
+  </div>
+
+  <h3>Conceptos mínimos de Flask para este proyecto</h3>
+  <table>
+    <tr><th>Concepto</th><th>¿Qué hace?</th><th>Ejemplo en el proyecto</th></tr>
+    <tr><td><code>Flask(__name__)</code></td><td>Crea la aplicación</td><td><code>app = Flask(__name__)</code></td></tr>
+    <tr><td><code>@app.route('/')</code></td><td>Escucha la URL raíz</td><td>Sirve el mapa visual</td></tr>
+    <tr><td><code>render_template()</code></td><td>Envía el HTML al browser</td><td>Devuelve <code>index.html</code></td></tr>
+    <tr><td><code>request.get_json()</code></td><td>Lee los datos que mandó el browser</td><td>Lee <code>{start, end}</code></td></tr>
+    <tr><td><code>jsonify()</code></td><td>Responde con JSON</td><td>Devuelve <code>{steps, path, cost}</code></td></tr>
+  </table>
+
+  <h3>Los dos endpoints importantes</h3>
+<pre><span class="cm"># ── Endpoint 1: Sirve la página visual ────────────────────────</span>
+<span class="kw">@app.route</span>(<span class="str">'/'</span>)
+<span class="kw">def</span> <span class="fn">index</span>():
+    edges_json = [[a, b, w] <span class="kw">for</span> a, b, w <span class="kw">in</span> EDGE_LIST]
+    <span class="kw">return</span> render_template(<span class="str">'index.html'</span>,
+                           nodes=NODE_POSITIONS,
+                           edges=edges_json)
+
+<span class="cm"># ── Endpoint 2: Ejecuta el algoritmo y devuelve pasos ────────</span>
+<span class="kw">@app.route</span>(<span class="str">'/run'</span>, methods=[<span class="str">'POST'</span>])
+<span class="kw">def</span> <span class="fn">run</span>():
+    data  = request.<span class="fn">get_json</span>()       <span class="cm"># lee {start, end} del browser</span>
+    start = data.<span class="fn">get</span>(<span class="str">'start'</span>)
+    end   = data.<span class="fn">get</span>(<span class="str">'end'</span>)
+    steps, path, cost = <span class="fn">_bidirectional_dijkstra_steps</span>(graph, start, end)
+    <span class="kw">return</span> jsonify({<span class="str">"steps"</span>: steps, <span class="str">"path"</span>: path, <span class="str">"cost"</span>: cost})</pre>
+
+  <div class="box box-tip">
+    <strong>💡 La comunicación browser ↔ servidor</strong>
+    Cuando hacés click en "Play", el navegador manda un mensaje al servidor en formato JSON: <code>{"start": "0x0", "end": "7x12"}</code>. El servidor corre el algoritmo y responde con todos los pasos. Es como enviar una pregunta por WhatsApp y recibir la respuesta.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ S8 -->
+<div class="section" id="s8">
+  <div class="section-header">
+    <div class="step-num">8</div>
+    <h2>La Interfaz Visual — <code>index.html</code></h2>
+  </div>
+
+  <p>La interfaz usa el elemento <code>&lt;canvas&gt;</code> de HTML5 para dibujar el mapa directamente con JavaScript, sin ninguna librería extra.</p>
+
+  <h3>Las 4 capas de dibujo (en orden)</h3>
+  <table>
+    <tr><th>#</th><th>Capa</th><th>Color</th><th>¿Cuándo aparece?</th></tr>
+    <tr><td>1</td><td>Calles base</td><td>Gris oscuro <code>#152230</code></td><td>Siempre visible</td></tr>
+    <tr><td>2</td><td>Frente de DESTINO</td><td>Naranja con glow</td><td>Durante la animación</td></tr>
+    <tr><td>3</td><td>Frente de INICIO</td><td>Azul con glow</td><td>Durante la animación</td></tr>
+    <tr><td>4</td><td>Ruta final</td><td>Verde brillante</td><td>Al terminar</td></tr>
+  </table>
+
+  <h3>La lógica de animación</h3>
+<pre><span class="cm">// Cada paso que devuelve el servidor tiene estas aristas nuevas:</span>
+<span class="cm">// { new_edges_fwd: [["0x0","0x1"], ...], new_edges_bwd: [...] }</span>
+
+animInterval = <span class="fn">setInterval</span>(() => {
+    <span class="kw">const</span> s = steps[currentStep];
+
+    <span class="cm">// ACUMULAR — las aristas se agregan al mapa, no se reemplazan</span>
+    (s.new_edges_fwd || []).<span class="fn">forEach</span>(([a, b]) => {
+        litFwd[<span class="fn">edgeKey</span>(a, b)] = <span class="kw">true</span>;   <span class="cm">// marca arista azul</span>
+    });
+    (s.new_edges_bwd || []).<span class="fn">forEach</span>(([a, b]) => {
+        litBwd[<span class="fn">edgeKey</span>(a, b)] = <span class="kw">true</span>;   <span class="cm">// marca arista naranja</span>
+    });
+
+    <span class="fn">drawGraph</span>(litFwd, litBwd, []);    <span class="cm">// redibujar con acumulados</span>
+    currentStep++;
+}, <span class="num">60</span>);  <span class="cm">// cada 60ms → ~16 pasos por segundo</span></pre>
+
+  <div class="box box-info">
+    <strong>🔑 Concepto clave: acumulación vs. reemplazo</strong>
+    En cada tick del intervalo NO borramos lo anterior. Solo <em>agregamos</em> las aristas nuevas. Esto crea el efecto de "mancha que crece" desde ambos extremos, igual que en el video de referencia.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ S9 -->
+<div class="section" id="s9">
+  <div class="section-header">
+    <div class="step-num">9</div>
+    <h2>Ejecutar el proyecto en 127.0.0.1</h2>
+  </div>
+
+  <div class="box box-info">
+    <strong>🌐 ¿Qué es 127.0.0.1?</strong>
+    Es la dirección IP de tu propia computadora. Cuando el servidor Flask corre, le dice al sistema operativo "escuchá conexiones en el puerto 5000". Entonces podés acceder desde el navegador poniendo <code>http://127.0.0.1:5000</code> — eso es equivalente a entrar a un sitio web, pero alojado en tu propia máquina.
+  </div>
+
+  <h3>Cómo ejecutar — paso a paso</h3>
+
+  <p><strong>Paso 1:</strong> Abrí una terminal en la carpeta del proyecto</p>
+<pre><span class="cm"># En Windows PowerShell:</span>
+cd "C:\Ruta\A\dijkstra-visualizer\src"</pre>
+
+  <p><strong>Paso 2:</strong> Ejecutá el servidor</p>
+<pre>python app.py</pre>
+
+  <p>La terminal va a mostrar algo así:</p>
+  <div class="box box-dark">
+    * Serving Flask app 'app'<br>
+    * Debug mode: on<br>
+    * Running on <strong>http://127.0.0.1:5000</strong><br>
+    * Press CTRL+C to quit
+  </div>
+
+  <p><strong>Paso 3:</strong> Abrí el navegador y visitá:</p>
+  <div class="box box-dark" style="font-size:1.1em;text-align:center">
+    http://127.0.0.1:5000
+  </div>
+
+  <h3>Cómo usar la aplicación</h3>
+  <ol>
+    <li>Hacé <strong>click en cualquier intersección</strong> → queda marcada como INICIO (punto verde).</li>
+    <li>Hacé <strong>click en otra intersección</strong> → queda marcada como DESTINO (punto rojo).</li>
+    <li>Presioná el botón <strong>▶ Play</strong>.</li>
+    <li>Observá cómo las calles se iluminan desde ambos extremos.</li>
+    <li>Al finalizar, la ruta más corta aparece en verde brillante.</li>
+    <li>Presioná <strong>↺ Reset</strong> para volver a empezar.</li>
+  </ol>
+
+  <div class="box box-info">
+    <strong>⚠️ Errores comunes</strong>
+    <ul style="margin-top:6px">
+      <li><code>ModuleNotFoundError: No module named 'flask'</code> → Ejecutá <code>pip install flask</code></li>
+      <li><code>Address already in use</code> → Cerrá otra instancia del servidor o cambiá el puerto</li>
+      <li>La página no carga → Verificá que el servidor esté corriendo (mirá la terminal)</li>
+    </ul>
+  </div>
+
+  <h3>Para detener el servidor</h3>
+  <p>Presioná <code>Ctrl + C</code> en la terminal donde corre Flask.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ S10 -->
+<div class="section" id="s10">
+  <div class="section-header">
+    <div class="step-num">10</div>
+    <h2>Cómo explicar el algoritmo (sin dominar el código)</h2>
+  </div>
+
+  <div class="box box-tip">
+    <strong>💡 Lo más importante de esta sección</strong>
+    No necesitás entender cada línea de código para poder <em>explicar qué hace el programa</em>. Esta guía te da el vocabulario y la narrativa para hacerlo con confianza.
+  </div>
+
+  <h3>Script de demostración</h3>
+  <p>Guión sugerido para cuando presentes el proyecto:</p>
+
+  <div class="box" style="background:#fff;border:2px solid #0d6efd;padding:22px 26px">
+    <p><em>"Este programa simula cómo un GPS o aplicación de mapas encuentra la ruta más corta entre dos puntos."</em></p>
+    <p style="margin-top:12px"><em>"La ciudad está representada como un <strong>grafo</strong>: cada intersección es un nodo, cada calle es una arista con un peso que representa su distancia o tiempo de viaje."</em></p>
+    <p style="margin-top:12px"><em>"Cuando presiono Play, el algoritmo empieza a explorar las calles. Pero lo hace desde <strong>dos extremos al mismo tiempo</strong>: desde el punto de inicio (en azul) y desde el destino (en naranja). Esto se llama Dijkstra Bidireccional."</em></p>
+    <p style="margin-top:12px"><em>"En cada paso, el algoritmo elige la calle de <strong>menor costo acumulado</strong> que aún no visitó. Por eso el frente se expande más rápido por caminos cortos y más lento por caminos largos."</em></p>
+    <p style="margin-top:12px"><em>"Cuando los dos frentes se encuentran, el algoritmo sabe que encontró el camino óptimo y lo resalta en verde."</em></p>
+  </div>
+
+  <h3>Las 5 preguntas del algoritmo que tenés que poder responder</h3>
+  <ol>
+    <li>¿Qué representa un nodo en este proyecto? ¿Y una arista?</li>
+    <li>¿Por qué las distancias se inicializan en infinito?</li>
+    <li>¿Qué ventaja tiene Dijkstra Bidireccional sobre el clásico?</li>
+    <li>¿Qué hace Flask en este proyecto? ¿Por qué lo necesitamos?</li>
+    <li>¿Qué pasa si no hay ningún camino entre los dos nodos elegidos?</li>
+  </ol>
+
+  <h3>Las 5 preguntas de redes que tenés que poder responder</h3>
+  <div class="box box-info" style="margin-bottom:10px">
+    <strong>📡 Conexión con Redes Informáticas</strong>
+    Este proyecto simula exactamente lo que hacen los routers en Internet. Estas preguntas conectan lo que ves en pantalla con lo que pasa en la red real.
+  </div>
+  <ol>
+    <li>Si los nodos fueran <strong>routers</strong> y las aristas fueran <strong>enlaces de red</strong>, ¿qué representaría el peso de cada arista? ¿Podría ser ancho de banda, latencia, o costo administrativo?</li>
+    <li>¿Qué protocolo de enrutamiento real usa Dijkstra como base? ¿En qué capa del modelo OSI opera?</li>
+    <li>En nuestra simulación el grafo es estático. En una red real los enlaces pueden caerse o congestionarse. ¿Cómo debería cambiar el programa para reflejar eso?</li>
+    <li>¿Qué diferencia hay entre enrutamiento <strong>estático</strong> y <strong>dinámico</strong>? ¿Cuál simula nuestro proyecto?</li>
+    <li>Cuando Flask responde al browser por <code>127.0.0.1:5000</code>, ¿qué protocolos de red están actuando debajo? (TCP, IP, HTTP — ¿en qué orden?)</li>
+  </ol>
+
+  <h3>Mapa conceptual para la presentación</h3>
+  <div class="diagram">
+    <pre style="background:transparent;color:#cdd6f4;text-align:left;display:inline-block">
+  CIUDAD REAL            PROGRAMA               RED INFORMÁTICA
+  ────────────────────────────────────────────────────────────────────
+  Intersección     →     Nodo del grafo    →    Router / Switch
+  Calle            →     Arista con peso   →    Enlace de red
+  Distancia        →     Peso de arista    →    Métrica (latencia/costo)
+  GPS buscando     →     Algoritmo Dijkstra →   Protocolo OSPF
+  Señal del GPS    →     Cola de prioridad →    Tabla de enrutamiento
+  Ruta en pantalla →     Canvas + JS       →    Ruta en tabla de routing
+  Servidor de mapas →    Flask 127.0.0.1   →    Servidor HTTP (capa 7)
+    </pre>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ S11 -->
+<div class="section" id="s11">
+  <div class="section-header">
+    <div class="step-num">11</div>
+    <h2>Ejercicios y desafíos</h2>
+  </div>
+
+  <div class="ejercicio">
+    <span class="nivel nivel-basico">⭐ Básico</span>
+    <h4>1. Cambiar los colores del mapa</h4>
+    <p>En <code>index.html</code>, cambiá los colores del frente azul (<code>#00aaff</code>) y naranja (<code>#ff5500</code>) por otros dos colores de tu elección. Ejecutá el servidor y verificá el cambio.</p>
+    <p><em>Objetivo: familiarizarte con el código HTML/CSS y el ciclo editar-guardar-recargar.</em></p>
+  </div>
+
+  <div class="ejercicio">
+    <span class="nivel nivel-basico">⭐ Básico</span>
+    <h4>2. Cambiar el tamaño de la grilla</h4>
+    <p>En <code>app.py</code>, modificá las variables <code>_COLS</code> y <code>_ROWS</code> (por ejemplo a 8×5). Observá cómo cambia el mapa. ¿Qué pasa si ponés valores muy grandes?</p>
+  </div>
+
+  <div class="ejercicio">
+    <span class="nivel nivel-medio">⭐⭐ Intermedio</span>
+    <h4>3. Mostrar el costo acumulado durante la animación</h4>
+    <p>Modificá el servidor para que cada paso incluya también las distancias actuales. En el frontend, mostrá en tiempo real el costo del frente más barato explorado.</p>
+    <p><em>Pista: agregá <code>"dist_fwd": dist_fwd[u]</code> a cada step en <code>app.py</code>.</em></p>
+  </div>
+
+  <div class="ejercicio">
+    <span class="nivel nivel-medio">⭐⭐ Intermedio</span>
+    <h4>4. Agregar un slider de velocidad</h4>
+    <p>Agregá en <code>index.html</code> un elemento <code>&lt;input type="range"&gt;</code> que controle el intervalo de la animación (actualmente 60ms). Vas a poder ir más lento para estudiar el algoritmo paso a paso.</p>
+  </div>
+
+  <div class="ejercicio">
+    <span class="nivel nivel-avanzado">⭐⭐⭐ Avanzado</span>
+    <h4>5. Implementar Dijkstra clásico y comparar</h4>
+    <p>Agregá un botón "Modo Clásico" que use Dijkstra unidireccional. Al terminar la animación, mostrá cuántos nodos exploró cada versión. Comparalos visualmente para ver la diferencia de eficiencia.</p>
+  </div>
+
+  <div class="ejercicio">
+    <span class="nivel nivel-avanzado">⭐⭐⭐ Avanzado</span>
+    <h4>6. Grafo con obstáculos</h4>
+    <p>Modificá la generación del grafo en <code>app.py</code> para incluir "zonas bloqueadas" (calles sin arista). Representalas visualmente en el canvas. El algoritmo debe rodearlas automáticamente.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ S12 -->
+<div class="section" id="s12">
+  <div class="section-header">
+    <div class="step-num" style="background:#198754">12</div>
+    <h2>Redes informáticas — Dijkstra en la vida real</h2>
+  </div>
+
+  <div class="box box-tip">
+    <strong>🌐 Por qué esta sección importa</strong>
+    Todo lo que construiste en este proyecto ocurre de verdad dentro de Internet cada vez que un paquete de datos viaja de una computadora a otra. Esta sección conecta el código con la realidad de las redes.
+  </div>
+
+  <h3>El modelo: de ciudad a red informática</h3>
+  <p>La misma estructura que usamos para simular calles de una ciudad es idéntica a la que usan los routers para decidir por dónde mandar los datos:</p>
+
+  <table>
+    <tr><th>En nuestro proyecto</th><th>En una red informática real</th><th>Detalle</th></tr>
+    <tr><td>Nodo (intersección)</td><td>Router / Switch de capa 3</td><td>Dispositivo que recibe y reenvía paquetes</td></tr>
+    <tr><td>Arista (calle)</td><td>Enlace de red</td><td>Cable ethernet, fibra óptica, Wi-Fi, etc.</td></tr>
+    <tr><td>Peso de arista</td><td>Métrica de enrutamiento</td><td>Puede ser latencia, ancho de banda, costo administrativo o saltos</td></tr>
+    <tr><td>Ruta más corta</td><td>Mejor ruta en tabla de routing</td><td>El camino que el paquete tomará para llegar a destino</td></tr>
+    <tr><td>Nodo inicio</td><td>Router de origen</td><td>Desde donde sale el paquete</td></tr>
+    <tr><td>Nodo destino</td><td>Router de destino</td><td>Hacia donde debe llegar el paquete</td></tr>
+    <tr><td>Frente azul (exploración)</td><td>Flooding de LSA (Link State Advertisements)</td><td>El router inunda la red con información de sus vecinos</td></tr>
+    <tr><td>Ruta verde final</td><td>Entrada en tabla de routing</td><td>Se guarda como: "Para llegar a X, salí por interfaz Y"</td></tr>
+  </table>
+
+  <h3>OSPF — el protocolo que usa Dijkstra en Internet</h3>
+  <p><strong>OSPF</strong> (Open Shortest Path First) es el protocolo de enrutamiento más usado en redes empresariales y de proveedores de Internet. Su nombre lo dice todo: encuentra el camino más corto primero.</p>
+
+  <table>
+    <tr><th>Característica OSPF</th><th>Equivalente en nuestro proyecto</th></tr>
+    <tr><td>Tipo: Link State Protocol</td><td>Cada nodo conoce el grafo completo antes de correr Dijkstra</td></tr>
+    <tr><td>Capa OSI: Capa 3 (Red)</td><td>Flask opera en Capa 7 (Aplicación) sobre TCP/IP</td></tr>
+    <tr><td>Métrica: costo del enlace (basada en ancho de banda)</td><td>Pesos aleatorios entre 1 y 14 en nuestra grilla</td></tr>
+    <tr><td>Convergencia: recalcula cuando cambia la topología</td><td>Nuestro grafo es estático (no recalcula en tiempo real)</td></tr>
+    <tr><td>Áreas OSPF para escalar</td><td>Podría simularse con subgrafos separados</td></tr>
+  </table>
+
+  <h3>Capa OSI y nuestro proyecto</h3>
+  <p>Identificá en qué capa de la pila OSI opera cada componente del proyecto:</p>
+  <ul style="margin-top:8px">
+    <li>El cable de red de la computadora → Capa 1 (Física)</li>
+    <li>La dirección IP <code>127.0.0.1</code> → Capa 3 (Red)</li>
+    <li>El puerto <code>5000</code> de Flask → Capa 4 (Transporte / TCP)</li>
+    <li>El protocolo HTTP que usa el browser → Capa 7 (Aplicación)</li>
+    <li>El algoritmo Dijkstra simulado → equivale a Capa 3 en routers reales</li>
+  </ul>
+
+  <h3>¿Qué pasa realmente cuando accedés a 127.0.0.1:5000?</h3>
+  <p>Aunque parece magia, hay toda una pila de protocolos actuando:</p>
+
+  <div class="diagram">
+    <pre style="background:transparent;color:#cdd6f4;text-align:left;display:inline-block">
+  NAVEGADOR
+  │  Escribís: http://127.0.0.1:5000
+  │
+  ▼  Capa 7 — HTTP
+     GET / HTTP/1.1
+     Host: 127.0.0.1:5000
+  │
+  ▼  Capa 4 — TCP
+     Establece conexión al puerto 5000
+     Three-way handshake: SYN → SYN-ACK → ACK
+  │
+  ▼  Capa 3 — IP
+     Dirección destino: 127.0.0.1 (loopback)
+     No sale a la red — se queda en la propia máquina
+  │
+  ▼  Sistema Operativo
+     Detecta que 127.0.0.1 es local → entrega al proceso Flask
+  │
+  ▼  FLASK (Python)
+     Recibe la petición HTTP
+     Ejecuta render_template('index.html')
+     Responde con el HTML del mapa
+  │
+  ▼  NAVEGADOR
+     Renderiza el canvas y el JavaScript
+    </pre>
+  </div>
+
+  <h3>Enrutamiento estático vs. dinámico</h3>
+  <table>
+    <tr><th></th><th>Estático</th><th>Dinámico (OSPF/RIP)</th></tr>
+    <tr><td><strong>¿Quién configura las rutas?</strong></td><td>El administrador de red, a mano</td><td>El protocolo, automáticamente</td></tr>
+    <tr><td><strong>¿Se adapta a fallos?</strong></td><td>No — si cae un enlace, no recalcula</td><td>Sí — recalcula la ruta en segundos</td></tr>
+    <tr><td><strong>¿Usa Dijkstra?</strong></td><td>No</td><td>Sí (OSPF usa Dijkstra internamente)</td></tr>
+    <tr><td><strong>Nuestro proyecto simula…</strong></td><td>✅ Sí (grafo fijo)</td><td>❌ No (no hay recálculo dinámico)</td></tr>
+    <tr><td><strong>Uso típico</strong></td><td>Redes pequeñas / ramas simples</td><td>Redes empresariales / ISPs</td></tr>
+  </table>
+
+  <h3>Métricas de enrutamiento — ¿qué puede representar el peso?</h3>
+  <p>En nuestro proyecto los pesos son números aleatorios. En una red real, el peso de cada enlace puede calcularse de varias formas:</p>
+
+  <table>
+    <tr><th>Métrica</th><th>Qué mide</th><th>Protocolo que la usa</th></tr>
+    <tr><td>Saltos (hops)</td><td>Cantidad de routers entre origen y destino</td><td>RIP</td></tr>
+    <tr><td>Ancho de banda</td><td>Costo = 100 Mbps / ancho de banda del enlace</td><td>OSPF</td></tr>
+    <tr><td>Latencia (delay)</td><td>Tiempo de propagación del enlace</td><td>EIGRP</td></tr>
+    <tr><td>Carga (load)</td><td>Qué tan ocupado está el enlace en ese momento</td><td>EIGRP</td></tr>
+    <tr><td>Costo administrativo</td><td>Valor asignado manualmente por el admin</td><td>OSPF, BGP</td></tr>
+  </table>
+
+  <div class="box box-info">
+    <strong>💡 Para pensar</strong>
+    El algoritmo siempre elige el camino de <em>menor suma de pesos</em>. Si esos pesos representaran la latencia de cada enlace, el resultado sería la ruta más rápida para que un paquete llegue a destino. Eso es exactamente lo que hace tu router hogareño cuando decide por dónde mandarte el video de YouTube.
+  </div>
+
+  <h3>Ejercicios de redes</h3>
+
+  <div class="ejercicio">
+    <span class="nivel nivel-basico">⭐ Básico</span>
+    <h4>R1. Re-etiquetar el mapa como red de routers</h4>
+    <p>Cambiá en <code>app.py</code> los nombres de nodos de formato <code>"0x0"</code> a nombres de routers tipo <code>"R-0-0"</code>. Cada nodo ahora representa un router con una dirección IP asignada.</p>
+  </div>
+
+  <div class="ejercicio">
+    <span class="nivel nivel-basico">⭐ Básico</span>
+    <h4>R2. Simular ancho de banda como métrica</h4>
+    <p>Modificá la generación de pesos en <code>app.py</code> para que calcule el costo como <code>100 / ancho_de_banda</code> (igual que OSPF). Donde ancho_de_banda es un valor aleatorio entre 1 y 100 Mbps. Los enlaces más rápidos tendrán menor costo y serán preferidos.</p>
+  </div>
+
+  <div class="ejercicio">
+    <span class="nivel nivel-medio">⭐⭐ Intermedio</span>
+    <h4>R3. Mostrar la tabla de enrutamiento</h4>
+    <p>Al finalizar la animación, mostrá debajo del canvas una tabla estilo "tabla de routing" con columnas: <em>Destino | Siguiente salto | Costo acumulado</em>. Esto es exactamente lo que guarda un router OSPF en memoria.</p>
+  </div>
+
+  <div class="ejercicio">
+    <span class="nivel nivel-medio">⭐⭐ Intermedio</span>
+    <h4>R4. Simular caída de un enlace</h4>
+    <p>Agregá un botón "Cortar enlace" que permita hacer click en una arista para eliminarla del grafo. Al volver a correr el algoritmo, la ruta debe recalcularse evitando ese enlace. Pensá cómo OSPF manejaría esto en tiempo real.</p>
+  </div>
+
+  <div class="ejercicio">
+    <span class="nivel nivel-avanzado">⭐⭐⭐ Avanzado</span>
+    <h4>R5. Comparar RIP vs OSPF</h4>
+    <p>Implementá una versión del algoritmo que use <strong>conteo de saltos</strong> como métrica (todos los pesos = 1, simulando RIP). Agregá un botón para alternar entre "modo OSPF" (pesos reales) y "modo RIP" (pesos = 1). Observá cómo cambia la ruta elegida y discutí cuál es más eficiente.</p>
+  </div>
+
+  <h3>Las 10 preguntas del examen — algoritmo + redes</h3>
+  <p>Podés responder estas preguntas mirando el programa en ejecución, sin necesidad de leer el código fuente completo.</p>
+  <table>
+    <tr><th>#</th><th>Pregunta</th><th>Área</th></tr>
+    <tr><td>1</td><td>¿Qué representa un nodo en este proyecto? ¿Y una arista?</td><td>Algoritmos</td></tr>
+    <tr><td>2</td><td>¿Por qué las distancias se inicializan en infinito?</td><td>Algoritmos</td></tr>
+    <tr><td>3</td><td>¿Qué ventaja tiene Dijkstra Bidireccional sobre el clásico?</td><td>Algoritmos</td></tr>
+    <tr><td>4</td><td>¿Qué hace Flask en este proyecto? ¿Por qué lo necesitamos?</td><td>Programación</td></tr>
+    <tr><td>5</td><td>¿Qué pasa si no hay ningún camino entre los dos nodos elegidos?</td><td>Algoritmos</td></tr>
+    <tr><td>6</td><td>Si los nodos fueran routers, ¿qué podría representar el peso de cada arista?</td><td>Redes</td></tr>
+    <tr><td>7</td><td>¿Qué protocolo de enrutamiento real usa Dijkstra internamente? ¿En qué capa OSI opera?</td><td>Redes</td></tr>
+    <tr><td>8</td><td>¿Qué diferencia hay entre enrutamiento estático y dinámico? ¿Cuál simula nuestro proyecto?</td><td>Redes</td></tr>
+    <tr><td>9</td><td>Cuando el browser accede a 127.0.0.1:5000, ¿qué protocolos actúan? Mencionar al menos 3.</td><td>Redes</td></tr>
+    <tr><td>10</td><td>¿Por qué 127.0.0.1 se llama dirección de loopback? ¿El paquete sale físicamente a la red?</td><td>Redes</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ FOOTER -->
+<footer>
+  <p><strong>Visualizador de Dijkstra Bidireccional</strong> — Guía del Alumno</p>
+  <p style="margin-top:6px">Python 3 · Flask · HTML5 Canvas · Algoritmos y Estructuras de Datos · Redes Informáticas</p>
+  <p style="margin-top:6px;color:#aaa">Protocolos relacionados: OSPF · RIP · TCP/IP · HTTP · Modelo OSI</p>
+</footer>
+
+</body>
+</html>
